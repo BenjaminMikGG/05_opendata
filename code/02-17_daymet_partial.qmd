@@ -36,7 +36,7 @@ library(daymetr)
 ```
 
 ```{r}
-field 
+field <- read_csv("../data/04_cotton_fielddata.csv")
 
 field
 ```
@@ -60,25 +60,41 @@ summary(field)
 How many unique years?  
 
 ```{r unique years}
-
+field %>%
+  distinct(year)
 ```
 
 41 distinct years in the data set.  
 
 Now, how many unique sites?
 ```{r unique sites}
-
+field %>%
+  distinct(site)
 ```
 
 65 unique sites.  
 
 What is the statistical distribution of fiber strength?  
 ```{r fiber strength}
-
+ggplot(data = field,
+       aes(x = strength_gtex)
+       ) + 
+  geom_density()
 ```
 
 ```{r}
+states <- us_states() %>%
+  filter(!(state_abbr %in% c("PR","AK","HI")))
 
+states
+
+ggplot() +
+  geom_sf(data = states) + 
+  geom_point(data = field,
+    aes(x = lon,
+        y = lat,
+        color = strength_gtex)
+  )
 ```
 
 # Open weather data - Daymet  
@@ -118,17 +134,27 @@ Let's try it with the first site-year on the data frame.
 
 # Daymet - one site-year  
 ```{r one site-year}
-field
+field 
 
-daymet_one 
+daymet_one <- download_daymet(site = field$site[1],
+                              lat = field$lat[1],
+                              lon = field$lon[1],
+                              start = field$year[1],
+                              end = field$year[1],
+                              simplify = T
+                              )
 
 daymet_one
 ```
 
 How many rows above? Why?  
+2555 / 365 = 7. Because we have 7 variables.
 
 ```{r}
-daymet_one 
+daymet_one %>%
+  pivot_wider(names_from = measurement,
+              values_from = value)
+  
 ```
 How many rows above? Why?  
 
@@ -142,8 +168,28 @@ For that, let's use the **map()** family of functions from the purrr package.
 **WARNING**: the chunk below took about **3 minutes** to run on my laptop.  
 
 ```{r}
-daymet_all 
-
+daymet_all <- field %>%
+  mutate(weather = pmap(list(.y = year,
+                             .site = site,
+                             .lat = lat,
+                             .lon = lon),
+                        function(.y, .site, .lat, .lon)
+                          download_daymet(
+                            site = .site,
+                            lat = .lat,
+                            lon = .lon,
+                            start = .y,
+                            end = .y,
+                           simplify = T,
+                            silent = T
+                          ) %>%
+                          rename(.year = year,
+                                 .site = site
+                                 )
+                        
+                        ))
+  
+daymet_all
 ```
 
 Let's inspect weather data for the first site-year.  
