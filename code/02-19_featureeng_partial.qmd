@@ -147,7 +147,7 @@ fe_month_sum <- fe_month %>%
   ungroup()
 
 
-fe_month_sum
+fe_month_sum[1]
 ```
 
 8,376 rows because 698 site-years x 12 months.  
